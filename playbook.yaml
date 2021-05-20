@@ -5,11 +5,82 @@
     PATH: "/usr/bin/:/usr/local/bin/:{{ ansible_env.PATH }}"
   vars:
     cluster_name: bobocp4
+
+  vars_files:
+  - ./vars/main.yml
   
   tasks:
-  - name: Include variables
-    include_vars:
-      file: main.yml
+
+  #
+  # prerequisites: prepare-environment
+  #
+  - name: Install needed packages
+    yum:
+      name:
+        - podman
+        - skopeo
+        - jq
+        - git
+      state: present
+    become: true
+    tags: prepare-environment
+    
+  - name: Check if OC exists
+    stat:
+      path: /usr/local/bin/oc
+    register: oc_path
+    tags: prepare-environment
+
+  - name: Install OC if not present
+    block:
+      - name: Create temporary directory for oc
+        tempfile:
+          state: directory
+        register: oc_directory
+
+      - name: Download the content
+        get_url:
+          url: https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux.tar.gz
+          dest: "{{ oc_directory.path }}/oc.tar.gz"
+
+      - name: Extract oc binary and copy
+        unarchive:
+          src: "{{ oc_directory.path }}/oc.tar.gz"
+          dest: /usr/local/bin/
+          remote_src: yes
+    when: oc_path.stat.exists == False
+    tags: prepare-environment
+
+  - name: Check if twistcli exists
+    stat:
+      path: "{{ _twistlock_install_dir }}/{{ ansible_system | lower }}/twistcli"
+    register: twistcli_path
+    tags: prepare-environment
+
+  - name: Install twistlock cli if not present
+    block:
+      - name: Create twistlock directory
+        ansible.builtin.file:
+          path: "{{ _twistlock_install_dir }}"
+          state: directory
+          mode: 0755
+
+      - name: Create temporary directory for twistlock
+        tempfile:
+          state: directory
+        register: twistlock_directory
+
+      - name: Download the content
+        get_url:
+          url: "{{ _twistlock_download_url }}"
+          dest: "{{ twistlock_directory.path }}/twistlock.tar.gz"
+
+      - name: Extract oc binary and copy
+        unarchive:
+          src: "{{ twistlock_directory.path }}/twistlock.tar.gz"
+          dest: "{{ _twistlock_install_dir }}"
+    when: twistcli_path.stat.exists == False
+    tags: prepare-environment
 
   - name: Remove previous twistlock_console.yaml file (delete file)
     ansible.builtin.file:
@@ -19,7 +90,7 @@
   - name: Generate console deployment descriptor 
     ansible.builtin.shell:
       cmd: |
-        ./linux/twistcli \
+        {{ _twistlock_install_dir }}/{{ ansible_system | lower }}/twistcli \
           console export openshift \
           --storage-class "{{ _storage_class }}" \
           --image-name "{{ _twistlock_image_registry }}/twistlock/private:console_{{ _twistlock_version }}" \

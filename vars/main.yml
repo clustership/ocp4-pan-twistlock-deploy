@@ -1,3 +1,7 @@
+tools_directory_path: /usr/local/bin
+oc_directory.path: "{{ tools_directory_path }}"
+
+_twistlock_download_url: https://cdn.twistlock.com/releases/g05mz6e6/prisma_cloud_compute_edition_21_04_412.tar.gz
 _twistlock_install_dir: /home/phuet/pan
 _twistlock_version: 2.4
 
