@@ -1,0 +1,4 @@
+[jumphost]
+# host from where the installation is performed
+# 10.46.55.25 ansible_connection=ssh ansible_user=root
+localhost ansible_connection=local

@@ -1,0 +1,28 @@
+---
+- name: Deploy twistlock on OCP 4
+  hosts: jumphost
+  environment:
+    PATH: "/usr/bin/:/usr/local/bin/:{{ ansible_env.PATH }}"
+  vars:
+    cluster_name: bobocp4
+  
+  tasks:
+  - name: Include variables
+    include_vars:
+      file: main.yml
+
+  - name: Remove previous twistlock_console.yaml file (delete file)
+    ansible.builtin.file:
+      path: "{{ _twistlock_install_dir }}/twistlock_console.yaml"
+      state: absent
+
+  - name: Generate console deployment descriptor 
+    ansible.builtin.shell:
+      cmd: |
+        ./linux/twistcli \
+          console export openshift \
+          --storage-class "{{ _storage_class }}" \
+          --image-name "{{ _twistlock_image_registry }}/twistlock/private:console_{{ _twistlock_version }}" \
+          --service-type "ClusterIP"
+      chdir: "{{ _twistlock_install_dir }}"
+      creates: "{{ _twistlock_install_dir }}/twistlock_console.yaml"

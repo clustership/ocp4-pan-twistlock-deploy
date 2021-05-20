@@ -1,0 +1,5 @@
+_twistlock_install_dir: /home/phuet/pan
+_twistlock_version: 2.4
+
+_twistlock_image_registry: image-registry.openshift-image-registry.svc:5000
+_storage_class: standard
